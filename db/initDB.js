@@ -1,9 +1,10 @@
 const mysql = require('mysql');
+const { DBCONFIG } = require('../togy.gc.config')
 
-const DB_HOST = `ecs.togy.top`
-    , DB_USER = `root`
-    , DB_PASSWD = 'Hxl1314521'
-    , DB_NAME = 'gcnas'
+const DB_HOST = DBCONFIG.DB_HOST
+    , DB_USER = DBCONFIG.DB_USER
+    , DB_PASSWD = DBCONFIG.DB_PASSWD
+    , DB_NAME = DBCONFIG.DB_NAME
 
 
 const colorConsole = {
@@ -91,6 +92,11 @@ class initDB{
             })
         })()
     }
+    end(callback){
+        this.connection.end(data => {
+            console.log(colorConsole.whiteBG+colorConsole.red+`[SUCCESS] : INIT DATABASE SUCCEED!`+colorConsole.end)
+        })
+    }
     async #createConnection(){
         return new Promise((rec,rej) => {
             const connection = mysql.createConnection({
@@ -99,12 +105,12 @@ class initDB{
                 password:this.#DB_PASSWD,
                 database :this.#DB_NAME
             });
-            connection.connect();
+
             rec(connection)
         })
     }
     initTable(){
-        console.log(colorConsole.red+'[WARNING] : Data table initialization is about to begin'+colorConsole.end)
+        console.log(colorConsole.red+'[WARNING] : Data table initialization is about to begin!'+colorConsole.end)
     }
     //  初始化普通用户信息表
     createUserInfoTable(){
@@ -124,6 +130,8 @@ class initDB{
             'id INT AUTO_INCREMENT PRIMARY KEY,' +
             'username varchar(128),' +
             'password varchar(256),' +
+            'state int(1),' +
+            'avatar varchar(256),' +
             'createtime bigint(13))'
         this.connection.query(createUserPassSQL,(err,data) => {
             if(err) throw {TB:"user_passwd",code:err.code,errno:err.errno,sqlMessage:err.sqlMessage}
