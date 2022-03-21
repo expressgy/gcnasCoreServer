@@ -49,7 +49,49 @@ async function insertEmailCode(username,code){
     })
 }
 
+async function veriEmailCode(username,code,email,nickname,password){
+    return new Promise((rec,rej) => {
+        const connection = mysql.createConnection({
+            host:DB_HOST,
+            user:DB_USER,
+            password:DB_PASSWD,
+            database :DB_NAME,
+            multipleStatements: true
+        });
+        connection.connect();
+        const SQL = `select * from user_email_code where username = ? order by id desc limit 1;`
+        connection.query(SQL,[username],(err, results) => {
+            if(err){
+                rej(err)
+            }else{
+                const now = new Date().getTime()
+                //  十分钟有效
+                const a1 = results.length > 0 ? results[0].code == code : false;
+                const a2 = results.length > 0 ?(now - results[0].createtime) < 1000 * 60 * 10 : false
+                if( a1 && a2){
+                    const createtime = new Date().getTime()
+                    const SQL2 = `INSERT INTO user_info (username, email, createtime, nickname, state) VALUES(?, ?, ?, ?,1); INSERT INTO user_passwd (username, password, createtime) VALUES (?, ?, ?);`
+                    connection.query(SQL2,[username, email, createtime, nickname, username, password, createtime],(err2, results2) => {
+                        if(err2){
+                            if(err2.sqlMessage.indexOf(`PRIMARY`) > -1){
+                                rej('Duplicate')
+                            }
+                            rej('!sign')
+                        }else{
+                            rec(results2)
+                        }
+                    })
+                }else{
+                    rej('!code')
+                }
+            }
+            connection.end()
+        })
+    })
+}
+
 module.exports = {
     checkDuplicateForUsername,
-    insertEmailCode
+    insertEmailCode,
+    veriEmailCode
 }

@@ -118,6 +118,8 @@ class initDB{
             'username varchar(128) PRIMARY KEY,' +
             'nickname varchar(32),' +
             'email varchar(128),' +
+            'state int(1),' +
+            'avatar varchar(256),' +
             'createtime bigint(13))'
         this.connection.query(createUserInfoSQL,(err,data) => {
             if(err) throw {TB:'user_info',code:err.code,errno:err.errno,sqlMessage:err.sqlMessage}
@@ -130,8 +132,6 @@ class initDB{
             'id INT AUTO_INCREMENT PRIMARY KEY,' +
             'username varchar(128),' +
             'password varchar(256),' +
-            'state int(1),' +
-            'avatar varchar(256),' +
             'createtime bigint(13))'
         this.connection.query(createUserPassSQL,(err,data) => {
             if(err) throw {TB:"user_passwd",code:err.code,errno:err.errno,sqlMessage:err.sqlMessage}
