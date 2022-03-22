@@ -6,7 +6,8 @@ const DBCONFIG = {
 }
 
 const JWTCONFIG = {
-    SECRET : 'i_have_a_dream,i_love_gy,forever!'
+    SECRET : 'i_have_a_dream,i_love_gy,forever!',
+    EXPIRATIONTIME : 1000 * 60 * 60 * 24 * 30
 }
 
 const EMAILCONFIG = {

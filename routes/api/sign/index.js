@@ -1,9 +1,12 @@
 const router = require('koa-router')()
-const SQL = require('../../db/api/sign')
-const tools = require('../../tools')
-const sendEmail = require('../../email')
+const SQL = require('../../../db/api/sign')
+const tools = require('../../../tools')
+const sendEmail = require('../../../email')
+const { JWTCONFIG } = require('../../../togy.gc.config')
+const {encryptionToken} = require("../../../jwt");
 
 router.prefix('/askgy/sign')
+//  用户名查重
 router.post('/checkDuplicateForUsername', async (ctx, next) => {
     const username = ctx.request.body.username.toLowerCase();
     if(!username) ctx.bodt = {type:"error"}
@@ -28,6 +31,7 @@ router.post('/checkDuplicateForUsername', async (ctx, next) => {
         }
     }
 })
+//  发送邮箱验证
 router.post('/sendEmailCode',async (ctx,next) => {
     const username = ctx.request.body.username.toLowerCase();
     const email = ctx.request.body.email;
@@ -63,6 +67,7 @@ router.post('/sendEmailCode',async (ctx,next) => {
         }
     }
 })
+//  注册账号
 router.post('/veriEmailCode',async (ctx,next) => {
     const username = ctx.request.body.username.toLowerCase()
         , password = ctx.request.body.password
@@ -71,11 +76,28 @@ router.post('/veriEmailCode',async (ctx,next) => {
         , code = ctx.request.body.code
     try{
         const QueryResults = await SQL.veriEmailCode(username,code,email,nickname,password)
-        ctx.body = {
-            type:'success',
-            message:'注册成功成功 :' + username,
+        try{
+            const token = {
+                username,
+                iat:new Date().getTime(),
+                exp:JWTCONFIG.EXPIRATIONTIME
+            }
+            const ip = getUserIp(ctx.req)
+            const jwt = encryptionToken(token)
+            console.log('IP:',ip,'JWT.length : ',jwt.length)
+            const QueryResults2 = await SQL.insertJWT(username, jwt, ip, '0')
+            ctx.body = {
+                type:'success',
+                message:'注册成功 :' + username,
+                jwt
+            }
+        }catch (e) {
+            console.log(e)
+            ctx.body = {
+                type:'error',
+                message:'注册失败，JWT写入生成失败 :' + username,
+            }
         }
-
     }catch (e){
         if(e == '!code'){
             ctx.body = {
@@ -104,6 +126,14 @@ router.post('/veriEmailCode',async (ctx,next) => {
         }
     }
 })
+
+//  获取ip
+const getUserIp = (req) => {
+    return req.headers['x-forwarded-for'] ||
+        req.connection.remoteAddress ||
+        req.socket.remoteAddress ||
+        req.connection.socket.remoteAddress;
+}
 
 
 

@@ -83,12 +83,12 @@ class initDB{
                 //  创建数据库语句
                 const sql = `Create Database If Not Exists ${ DB_NAME } Character Set UTF8;`
                 //  执行语句
-                db.query(sql,(err,result) => {
+                db.query(sql,async (err,result) => {
                     if(err) throw {code:err.code,errno:err.errno,sqlMessage:err.sqlMessage}
+                    db.destroy()
+                    this.connection = await this.#createConnection()
+                    rec(this)
                 })
-                db.destroy()
-                this.connection = await this.#createConnection()
-                rec(this)
             })
         })()
     }
@@ -156,6 +156,7 @@ class initDB{
             'id INT AUTO_INCREMENT PRIMARY KEY,' +
             'username varchar(128),' +
             'jwt varchar(8),' +
+            'ip varchar(32),' +
             'data varchar(256),' +
             'createtime bigint(13))'
         this.connection.query(createUserJWTSQL,(err,data) => {

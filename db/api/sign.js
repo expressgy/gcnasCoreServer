@@ -90,8 +90,30 @@ async function veriEmailCode(username,code,email,nickname,password){
     })
 }
 
+async function insertJWT(username,jwt,ip,data){
+    return new Promise((rec,rej) => {
+        const connection = mysql.createConnection({
+            host:DB_HOST,
+            user:DB_USER,
+            password:DB_PASSWD,
+            database :DB_NAME
+        });
+        connection.connect();
+        const SQL = `INSERT INTO user_jwt (username, jwt, ip, data, createtime) VALUES(?, ?, ?, ?, ?)`;
+        connection.query(SQL,[username, jwt, ip, data, new Date().getTime()],(err, results) => {
+            if(err){
+                rej(err)
+            }else{
+                rec(results)
+            }
+            connection.end()
+        })
+    })
+}
+
 module.exports = {
     checkDuplicateForUsername,
     insertEmailCode,
-    veriEmailCode
+    veriEmailCode,
+    insertJWT
 }
