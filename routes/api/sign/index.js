@@ -8,7 +8,14 @@ const {encryptionToken} = require("../../../jwt");
 router.prefix('/askgy/sign')
 //  用户名查重
 router.post('/checkDuplicateForUsername', async (ctx, next) => {
-    const username = ctx.request.body.username.toLowerCase();
+    if(!ctx.request.body.username){
+        ctx.body = {
+            type:'error',
+            message:'未找到用户名',
+        }
+        return false
+    }
+    let username = ctx.request.body.username.toLowerCase() ;
     if(!username) ctx.bodt = {type:"error"}
     try{
         const data = await SQL.checkDuplicateForUsername(username)
@@ -33,6 +40,13 @@ router.post('/checkDuplicateForUsername', async (ctx, next) => {
 })
 //  发送邮箱验证
 router.post('/sendEmailCode',async (ctx,next) => {
+    if(!ctx.request.body.username || !ctx.request.body.email){
+        ctx.body = {
+            type:'error',
+            message:'未找到用户名和邮箱',
+        }
+        return false
+    }
     const username = ctx.request.body.username.toLowerCase();
     const email = ctx.request.body.email;
     const code = tools.randomStr2(6)
@@ -69,11 +83,18 @@ router.post('/sendEmailCode',async (ctx,next) => {
 })
 //  注册账号
 router.post('/veriEmailCode',async (ctx,next) => {
+    if(!ctx.request.body.username || !ctx.request.body.email || !ctx.request.body.password || !ctx.request.body.nickname || !ctx.request.body.code){
+        ctx.body = {
+            type:'error',
+            message:'未找到用户名和邮箱等注册信息',
+        }
+        return false
+    }
     const username = ctx.request.body.username.toLowerCase()
         , password = ctx.request.body.password
         , nickname = ctx.request.body.nickname
-        , email = ctx.request.body.email
-        , code = ctx.request.body.code
+        , email = ctx.request.body.email.toLowerCase()
+        , code = ctx.request.body.code.toUpperCase()
     try{
         const QueryResults = await SQL.veriEmailCode(username,code,email,nickname,password)
         try{
