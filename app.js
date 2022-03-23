@@ -9,6 +9,7 @@ const logger = require('koa-logger')
 const index = require('./routes/index')
 const users = require('./routes/users')
 const sign = require('./routes/api/sign')
+const login = require('./routes/api/login')
 
 const {decryptToken} = require('./jwt')
 
@@ -75,6 +76,7 @@ app.use(index.routes(), index.allowedMethods())
 app.use(users.routes(), users.allowedMethods())
 
 app.use(sign.routes(), users.allowedMethods())
+app.use(login.routes(), users.allowedMethods())
 
 // error-handling
 app.on('error', (err, ctx) => {

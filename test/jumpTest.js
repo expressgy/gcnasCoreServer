@@ -23,6 +23,18 @@ app.use(async (ctx,next) => {
     await next()
 })
 
+app.use(async (ctx,next) => {
+    if(ctx.url == '/user'){
+        ctx.body = {
+            code:401,
+            message:'无Token'
+        }
+        ctx.response.status = 401
+        ctx.response.message = 'not fund token'
+        console.log(ctx.response)
+    }
+})
+
 router.get('/', async (ctx) => {
     ctx.body = '<h1>Index</h1>';
 })

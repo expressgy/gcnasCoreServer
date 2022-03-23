@@ -155,7 +155,7 @@ class initDB{
         const createUserJWTSQL = 'Create Table If Not Exists user_jwt(' +
             'id INT AUTO_INCREMENT PRIMARY KEY,' +
             'username varchar(128),' +
-            'jwt varchar(8),' +
+            'jwt varchar(256),' +
             'ip varchar(32),' +
             'data varchar(256),' +
             'createtime bigint(13))'
