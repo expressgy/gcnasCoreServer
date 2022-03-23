@@ -34,7 +34,8 @@ router.post('/checkPassword', async (ctx, next) => {
             ctx.body = {
                 type:'success',
                 message:'登录成功 :' + username,
-                jwt
+                jwt,
+                username
             }
         }catch (e) {
             console.log(e)

@@ -45,6 +45,7 @@ app.use(async (ctx, next) => {
         if(canSign || canLogin){
             await next()
         }else{
+            console.log(ctx.request.body)
             const Token = ctx.request.body.GYToken
             const jwt = decryptToken(Token)
             if(jwt){

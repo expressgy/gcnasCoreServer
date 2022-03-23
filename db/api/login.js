@@ -18,7 +18,6 @@ async function checkPassword(username,password){
         const SQL = `select * from user_passwd where username = ? order by id desc limit 1;`
         connection.query(SQL,[username],(err, results) => {
             if(err){
-                console.log('EEE',err)
                 rej(err)
             }else{
                 if(results.length != 1){
