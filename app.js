@@ -7,9 +7,10 @@ const bodyparser = require('koa-bodyparser')
 const logger = require('koa-logger')
 
 const index = require('./routes/index')
-const users = require('./routes/users')
-const sign = require('./routes/api/sign')
-const login = require('./routes/api/login')
+    , users = require('./routes/users')
+    , sign = require('./routes/api/sign')
+    , login = require('./routes/api/login')
+    , home = require('./routes/api/home')
 
 const {decryptToken} = require('./jwt')
 
@@ -45,11 +46,11 @@ app.use(async (ctx, next) => {
         if(canSign || canLogin){
             await next()
         }else{
-            console.log(ctx.request.body)
             const Token = ctx.request.body.GYToken
-            const jwt = decryptToken(Token)
+            const jwt = await decryptToken(Token)
             if(jwt){
                 if((jwt.iat + jwt.exp) < new Date().getTime()){
+                    console.log('????')
                     ctx.body = {
                         type : 'error',
                         message : '权限检验失败，请登录账户！',
@@ -60,6 +61,7 @@ app.use(async (ctx, next) => {
                     await next()
                 }
             }else{
+                console.log('????2')
                 ctx.body = {
                     type : 'error',
                     message : '权限检验失败，请登录账户！',
@@ -76,8 +78,10 @@ app.use(async (ctx, next) => {
 app.use(index.routes(), index.allowedMethods())
 app.use(users.routes(), users.allowedMethods())
 
-app.use(sign.routes(), users.allowedMethods())
-app.use(login.routes(), users.allowedMethods())
+app.use(sign.routes(), sign.allowedMethods())
+app.use(login.routes(), login.allowedMethods())
+
+app.use(home.routes(), home.allowedMethods())
 
 // error-handling
 app.on('error', (err, ctx) => {

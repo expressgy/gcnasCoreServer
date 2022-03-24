@@ -8,13 +8,15 @@ module.exports={
         return token;
     },
     //解密token
-    decryptToken(token){
-        jwt.verify(token,JWTCONFIG.SECRET,(err,data) => {
-            if(err){
-                return false
-            }else{
-                return data;
-            }
-        });
+    async decryptToken(token){
+        return new Promise((rec,rej) => {
+            jwt.verify(token,JWTCONFIG.SECRET,(err,data) => {
+                if(err){
+                    rec(false);
+                }else{
+                    rec(data);
+                }
+            });
+        })
     }
 }

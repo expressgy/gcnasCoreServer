@@ -1,8 +1,6 @@
 const router = require('koa-router')()
 const SQL = require('../../../db/api/login')
 const SIGNSQL = require('../../../db/api/sign')
-const tools = require('../../../tools')
-const sendEmail = require('../../../email')
 const { JWTCONFIG } = require('../../../togy.gc.config')
 const {encryptionToken} = require("../../../jwt");
 

@@ -2,8 +2,6 @@ Math.random().toString(36).substr(2); //"2jdz2ecva7k"
 Math.random().toString(36).substr(2); //"tnn3ygzrky"
 
 
-console.log(Math.random().toString(36).substr(2))
-
 function randomStr1(){
     return Math.random().toString(36).substr(2)
 }
