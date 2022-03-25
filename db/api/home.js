@@ -159,6 +159,50 @@ async function editTurnData(username, id, turnpath, turnuser, turnpass){
     })
 }
 
+async function getNasData(username){
+    return new Promise((rec,rej) => {
+        const connection = mysql.createConnection({
+            host:DB_HOST,
+            user:DB_USER,
+            password:DB_PASSWD,
+            database :DB_NAME
+        });
+        connection.connect();
+        const SQL = `select * from user_nas where username = ? and state != 0 ;`
+        connection.query(SQL,[username],(err, results) => {
+            if(err){
+                rej(err)
+            }else{
+                rec(results)
+            }
+            connection.end()
+        })
+    })
+}
+
+async function addNasData(username, NasID){
+    return new Promise(async (rec,rej) => {
+        const connection = mysql.createConnection({
+            host:DB_HOST,
+            user:DB_USER,
+            password:DB_PASSWD,
+            database :DB_NAME
+        });
+        connection.connect();
+        const createtime = new Date().getTime()
+        const SQL = `INSERT INTO user_nas (username, nasid, createtime, state) VALUES (?, ?, ?, 1);`
+        connection.query(SQL,[username, NasID, createtime],(err, results) => {
+            if(err){
+                rej(err)
+            }else{
+                rec()
+            }
+            connection.end()
+        })
+    })
+}
+
+
 module.exports = {
     getUserInfo,
     updateUserInfo,
@@ -166,5 +210,7 @@ module.exports = {
     getTurnData,
     addTurnData,
     deleteTurnData,
-    editTurnData
+    editTurnData,
+    getNasData,
+    addNasData
 }

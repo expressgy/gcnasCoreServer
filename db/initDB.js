@@ -169,7 +169,8 @@ class initDB{
         const createUserNasSQL = 'Create Table If Not Exists user_nas(' +
             'id INT AUTO_INCREMENT PRIMARY KEY,' +
             'username varchar(128),' +
-            'nas varchar(64),' +
+            'state int(1),' +
+            'nasid varchar(64),' +
             'createtime bigint(13))'
         this.connection.query(createUserNasSQL,(err,data) => {
             if(err) throw {TB:'user_nas',code:err.code,errno:err.errno,sqlMessage:err.sqlMessage}

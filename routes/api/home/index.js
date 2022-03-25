@@ -178,4 +178,47 @@ router.post('/editTurnData', async (ctx, next) => {
     }
 })
 
+router.post('/getNasData', async (ctx, next) => {
+    const username = ctx.request.jwt.username.toLowerCase();
+    try{
+        const queryData = await HOMESQL.getNasData(username);
+        ctx.body = {
+            type:'success',
+            message:'请求Nas地址成功',
+            data : queryData
+        }
+    }catch (e) {
+        ctx.body = {
+            type:'warning',
+            message:'请求Nas地址失败',
+        }
+    }
+})
+
+router.post('/addNasData', async (ctx, next) => {
+    const username = ctx.request.jwt.username.toLowerCase();
+    if(!ctx.request.body.nasid){
+        ctx.body = {
+            type:'error',
+            message:'未找到Nas信息',
+        }
+        return false
+    }
+    const nasid = ctx.request.body.nasid
+    try{
+        const queryData = await HOMESQL.addNasData(username, nasid);
+        console.log(queryData)
+        ctx.body = {
+            type:'success',
+            message:'添加Nas地址成功',
+        }
+    }catch (e) {
+        ctx.body = {
+            type:'warning',
+            message:'添加Nas地址失败',
+        }
+    }
+})
+
+
 module.exports = router
