@@ -46,6 +46,7 @@ router.post('/updateUserInfo', async (ctx, next) => {
         }
     }
 })
+
 router.post('/updateUserPass', async (ctx, next) => {
     if(!ctx.request.body.oldPass || !ctx.request.body.newPass1){
         ctx.body = {
@@ -76,6 +77,24 @@ router.post('/updateUserPass', async (ctx, next) => {
         ctx.body = {
             type:'warning',
             message:'原始密码不正确',
+        }
+    }
+})
+
+router.post('/getTurnData', async (ctx, next) => {
+    const username = ctx.request.jwt.username.toLowerCase();
+    try{
+        const queryData = await HOMESQL.getTurnData(username);
+        console.log(queryData)
+        ctx.body = {
+            type:'success',
+            message:'请求TURN地址成功',
+            data : queryData
+        }
+    }catch (e) {
+        ctx.body = {
+            type:'warning',
+            message:'请求Turn地址失败',
         }
     }
 })

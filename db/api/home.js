@@ -72,8 +72,31 @@ async function updateUserPass(username,password){
         })
     })
 }
+
+async function getTurnData(username){
+    return new Promise((rec,rej) => {
+        const connection = mysql.createConnection({
+            host:DB_HOST,
+            user:DB_USER,
+            password:DB_PASSWD,
+            database :DB_NAME
+        });
+        connection.connect();
+        const SQL = `select * from user_turn where username = ? ;`
+        connection.query(SQL,[username],(err, results) => {
+            if(err){
+                rej(err)
+            }else{
+                rec(results)
+            }
+            connection.end()
+        })
+    })
+}
+
 module.exports = {
     getUserInfo,
     updateUserInfo,
-    updateUserPass
+    updateUserPass,
+    getTurnData
 }
