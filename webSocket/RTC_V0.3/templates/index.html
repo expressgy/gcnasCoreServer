@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="UTF-8">
+    <title>WebRTC-TEST_V0.3</title>
+    <script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <style>
+        html,body{
+            position: relative;
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+            display: flex;
+        }
+        #left{
+            position: relative;
+            flex-shrink: 1;
+            width: 300px;
+            height: 100%;
+            box-sizing: border-box;
+            padding: 0.7rem;
+            background: #74C7B8;
+
+            display: flex;
+            flex-direction: column;
+        }
+        #left>div{
+            position: relative;
+            width: auto;
+            flex: 1;
+            /*background: #333;*/
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        #myID{
+            line-height: 3rem;
+            font-size: 1.3rem;
+            background: #EF4F4F;
+            color:#fefefe;
+            margin-top: 0;
+        }
+        .userID{
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 5px;
+            background: #FFCDA3;
+            font-size: 1.2rem;
+            line-height: 2rem;
+            margin: 0.3rem 0;
+            cursor: pointer;
+            user-select: none;
+        }
+        #right{
+            position: relative;
+            flex: 1;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        #title{
+            position: relative;
+            text-align: center;
+            line-height: 3rem;
+            font-size: 1.2rem;
+            flex-shrink: 1;
+            height: 3rem;
+            font-weight: bold;
+        }
+        #main{
+            position: relative;
+            display: flex;
+            flex: 1;
+        }
+        #video{
+            position: relative;
+            flex: 1;
+            height: 100%;
+        }
+        #text{
+            position: relative;
+            flex-shrink: 1;
+            height: 100%;
+            width: 400px;
+            /*background: #C81623;*/
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+            padding: 0.7rem;
+        }
+        #msgShow{
+            position: relative;
+            flex: 1;
+            background: #FFF8E5;
+            border-radius: 5px;
+            margin-bottom: 5px;
+            box-sizing: border-box;
+            border: 1px solid #FFB344;
+            padding: 0.5rem;
+            user-select: none;
+            overflow-y: auto;
+            max-height: 600px;
+        }
+        .msgBoxBig{
+            position: relative;
+        }
+        .msgBoxBig-r{
+            display: flex;
+            flex-direction: row-reverse;
+        }
+        .msgBox{
+            position: relative;
+            max-width: 80%;
+            margin: 1rem 0;
+            padding: 0.5rem;
+            box-sizing: border-box;
+            border-radius: 5px;
+            width:fit-content;
+            width:-webkit-fit-content;
+            width:-moz-fit-content;
+        }
+        .left{
+            background: rgba(82,0,106,0.8);
+            color:#fefefe;
+        }
+        .right{
+            background: rgba(154,230,110,0.8);
+        }
+        #sendBox{
+            position: relative;
+            flex-shrink: 1;
+            background: #FFB344;
+            border-radius: 5px;
+            box-sizing: border-box;
+            padding: 0.2rem;
+            display: flex;
+            flex-direction: column;
+        }
+        #sendText{
+            position: relative;
+            display: inline-block;
+            border: 0;
+            outline: none;
+            resize: none;
+            margin: 0;
+            flex: 1;
+            line-height: 1.2rem;
+            font-family: Serif;
+            border-radius: 5px;
+            height: 2rem;
+            box-sizing: border-box;
+            padding: 0.6rem;
+        }
+        #sendButBox{
+            position: absolute;
+            width: 60px;
+            bottom: 1rem;
+            right: 1rem;
+        }
+        #sendBut{
+            position: relative;
+            width: 60px;
+            float: right;
+            background: #17D7A0;
+            border-radius: 5px;
+            height: 2rem;
+            margin-top: 0.3rem;
+            cursor: pointer;display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fefefe;
+            font-weight: 600;
+            transition: all ease-in-out 300ms;
+            user-select: none;
+        }
+        #sendBut:hover{
+            background: #52006A;
+        }
+    </style>
+</head>
+<body>
+<div id="left">
+    <div id="userList">
+        <div id="myID" class="userID"></div>
+    </div>
+</div>
+<div id="right">
+    <div id="title">?</div>
+    <div id="main">
+        <div id="text">
+            <div id="msgShow"></div>
+            <div id="sendBox">
+                <textarea id="sendText"></textarea>
+                <div id="sendButBox">
+                    <div id="sendBut">发送</div>
+                </div>
+            </div>
+        </div>
+        <div id="video"></div>
+    </div>
+</div>
+</body>
+<script>
+    class myWS{
+        ALLSTATE = 0
+
+        #heartState;//心跳状态
+        #heartStateInterval;//心跳宽限检测
+        #onOfferMsg;//
+        #onAnswerMsg;//
+        #onIceMsg;//
+        #onUserListMsg;//
+
+        constructor(configuration,callback) {
+            configuration ? configuration = configuration : configuration = {}
+            configuration.url ? this.url = configuration.url : this.url = 'localhost' || window.location.hostname;
+            configuration.path ? this.path = configuration.path : this.path = '';
+            configuration.type ? this.type = configuration.type : this.type = 'ws';
+            configuration.port ? this.port = configuration.port : this.port = '';
+            this.WS = new WebSocket(`${this.type}://${this.url}${this.port}${this.path}`);
+
+            this.WS.onopen = ()=>{
+                this.ALLSTATE = 1
+                console.log(`WebSocket已连接 : ${this.type}://${this.url}:${this.port}${this.path}`);
+            }
+            this.WS.onmessage = msg=>{
+                msg = msg.data.toString()
+                // console.log(msg)
+                let msgJSON
+                try{
+                    msgJSON = JSON.parse(msg);
+                }catch (e){
+                    console.log('JSON格式转换错误',e);
+                    return false
+                }
+                switch (msgJSON.type){
+                    case 'ID' :
+                        this.#setID(msgJSON.ID)
+                        callback()
+                        this.#heart()
+                        break
+                    case 'HEART' :
+                        this.#heartState = 1;
+                        break
+                    case 'OFFER' :
+                        this.#onOfferMsg(msgJSON);
+                        break;
+                    case 'ANSWER' :
+                        this.#onAnswerMsg(msgJSON);
+                        break
+                    case 'ICE' :
+                        this.#onIceMsg(msgJSON);
+                        break
+                    case 'userList' :
+                        this.#onUserListMsg(msgJSON)
+                        break
+                    default :
+                        console.log('不存在匹配项')
+                }
+            }
+            this.WS.onerror = err =>{
+                console.log('WebSocket连接异常 : ',err)
+            }
+            this.WS.onclose = () =>{
+                clearInterval(this.heartInterval)
+                this.ALLSTATE = 0
+                console.log('WebSocket断开连接')
+            }
+            this.#heartStateInterval = setInterval(()=>{
+                if(this.#heartState){
+                    this.#heartState = 0;
+                }else{
+                    console.log('心跳停止过长，WebSocket将主动断开')
+                    this.WS.close()
+                    clearInterval(this.#heartStateInterval)
+                }
+            },10000)
+        }
+        #setID(data){
+            this.myID = data
+        }
+        #heart(){
+            let heartData = {
+                type:'HEART'
+            }
+            this.heartInterval = setInterval(()=>{
+                this.WS.send(JSON.stringify(heartData))
+            },3000)
+        }
+        onOffer(callback){
+            this.#onOfferMsg = function (offer){
+                callback(offer)
+            }
+        }
+        onAswer(callback){
+            this.#onAnswerMsg = function (answer){
+                callback(answer)
+            }
+        }
+        onIce(callback){
+            this.#onIceMsg = function (ice){
+                callback(ice)
+            }
+        }
+        onUserList(callback){
+            this.#onUserListMsg = userlist=>{
+                callback(userlist)
+            }
+        }
+        send(data){
+            data = data.toString();
+            this.WS.send(data)
+        }
+    }
+    class myRTC{
+        #SL
+        #myID
+        #userID
+        #cfg = {}
+        #P2Pconfig = {}
+        #pc
+        #offerOptions = {}
+        #channel
+        #onChannelP2PData
+        #channelHeartInterval
+        #channelHeartState
+        #sendOffer
+        #useStartState = 0
+        #useOnDataChannelState = 0
+
+        constructor(sl,configuration,callback) {
+            if(!sl){
+                throw new Error("缺少信令服务对象");
+                return false
+            }
+            configuration ? configuration = configuration : configuration = {};
+            configuration.video ? this.#cfg.video = configuration.video : this.#cfg.video = false;
+            configuration.audio ? this.#cfg.audio = configuration.audio : this.#cfg.audio = false;
+            configuration.iceServers ? this.#cfg.iceServers = configuration.iceServers : this.#cfg.iceServers = [
+                { "urls": ["stun:ali.togy.top:3478"],
+                    "username": "nie",
+                    "credential": "Hxl1314521"
+                },{ "urls": ["turn:ali.togy.top:3478"],
+                    "username": "nie",
+                    "credential": "Hxl1314521"
+                },{ "urls": ["stun:rgv.togy.top:3478"],
+                    "username": "nie",
+                    "credential": "Hxl1314521"
+                },{ "urls": ["turn:rgv.togy.top:3478"],
+                    "username": "nie",
+                    "credential": "Hxl1314521"
+                }
+            ];
+            this.#SL = sl;
+            this.#myID = sl.myID
+            this.#offerOptions.offerToReceiveAudio = this.#cfg.audio ? 1 : 0
+            this.#offerOptions.offerToReceiveVideo = this.#cfg.video ? 1 : 0
+
+            this.#addAdapterJs('http://webrtc.github.io/adapter/adapter-latest.js').then(()=>{
+                console.log('adapter-latest.js 加载成功')
+                this.#getHash(()=>{
+                    //  创建点对点和数据通道
+                    this.#createP2P()
+                    this.#createDataChannel()
+                    callback(this)
+                })
+            }).catch(()=>{
+                console.log('adapter-latest.js 加载失败')
+            })
+        }
+        #getHash(callback){
+            let generateConfig = {
+                name: 'RSASSA-PKCS1-v1_5',
+                hash: 'SHA-256',
+                modulusLength: 2048,
+                publicExponent: new Uint8Array([1, 0, 1])
+            }
+            RTCPeerConnection.generateCertificate(generateConfig).then(cert=>{
+                this.#P2Pconfig.certificates = [cert];
+                this.#P2Pconfig.iceServers = this.#cfg.iceServers;
+                callback()
+            })
+        }
+        #createP2P(){
+            console.log('P2P建立参数',this.#P2Pconfig)
+            this.#pc = new RTCPeerConnection(this.#P2Pconfig);
+
+            setInterval(()=>{
+                console.log('iceConnectionState',this.#pc.iceConnectionState)
+                console.log('connectionState',this.#pc.connectionState)
+            },1000)
+
+
+
+            this.#SL.onOffer(offerData=>{
+                this.#pc.setRemoteDescription(offerData.data)
+                this.#pc.createAnswer().then(answer=>{
+                    this.#pc.setLocalDescription(answer);
+                    this.#userID = offerData.from
+                    let answerData = {
+                        type: 'ANSWER',
+                        from: this.#myID,
+                        to: this.#userID,
+                        data: answer
+                    }
+                    this.#SL.send(JSON.stringify(answerData))
+                }).catch(e=>{console.log(e)})
+            })
+            this.#SL.onAswer(answerData=>{
+                this.#pc.setRemoteDescription(answerData.data)
+            })
+            this.#SL.onIce(iceData=>{
+                this.#pc.addIceCandidate(iceData.data)
+            })
+            this.#pc.onicecandidate = e=>{
+                let iceData = {
+                    type:'ICE',
+                    from: this.#myID,
+                    to: this.#userID,
+                    data:e.candidate
+                }
+                if(e.candidate){
+                    this.#SL.send(JSON.stringify(iceData))
+                }else{
+                    console.log('ICE协商结束')
+                }
+
+            }
+
+        }
+        start(userID){
+            console.log('开始')
+            this.#userID = userID
+            this.#pc.createOffer(this.#offerOptions).then(description=>{
+                // description 本地描述
+                this.#pc.setLocalDescription(description).then(this.#sendOffer(description)).catch(e=>{console.log('无法创建会话描述',e)})
+            }).catch(e=>{console.log('获取本地描述失败',e)})
+
+            this.#sendOffer = offer=>{
+                console.log('发送Offer')
+                let offerData = {
+                    type: 'OFFER',
+                    from: this.#myID,
+                    to: this.#userID,
+                    data: offer
+                }
+                console.log(offerData)
+                this.#SL.send(JSON.stringify(offerData))
+            }
+        }
+        #createDataChannel(){
+            this.#channel = this.#pc.createDataChannel('MyData');
+
+            this.#channel.onopen = ()=>{
+                // console.log('DataChannel is Open')
+                let heart = {
+                    type:'P2PHEART'
+                }
+                let P2PHeartError = setInterval(()=>{
+                    if(this.#channelHeartState){
+                        this.#channelHeartState = 0
+                    }else{
+                        clearInterval(P2PHeartError)
+                        console.log('P2P断开连接')
+                    }
+                },5000)
+                this.#channelHeartInterval = setInterval(()=>{
+                    this.#channel.send(JSON.stringify(heart))
+                },1500)
+            }
+            this.#pc.ondatachannel = event=>{
+                event.channel.onmessage = msg=>{
+                    // console.log('DataChannel Msg : ' , msg.data)
+                    msg = msg.data
+                    let msgJSON
+                    try{
+                        msgJSON = JSON.parse(msg)
+                    }catch (e){
+                        console.log('P2P传来非JSON数据',msg)
+                        return false
+                    }
+                    if(msgJSON.type == 'P2PHEART'){
+                        this.#channelHeartState=1
+                    }else{
+                        if(this.#useOnDataChannelState){
+                            this.#onChannelP2PData(msgJSON)
+                        }
+                    }
+                }
+                event.channel.onopen = ()=>{console.log('DataChannel is Open')}
+                event.channel.onclose = ()=>{
+                    console.log('DataChannel is Close')
+                    clearInterval(this.#channelHeartInterval)
+                }
+                event.channel.onerror = (e)=>{console.log('DataChannel is error',e)}
+            }
+        }
+        onChannelData(callback){
+            this.#useOnDataChannelState = 1
+            this.#onChannelP2PData = data=>{callback(data)}
+        }
+        send(data){
+            data = data.toString()
+            this.#channel.send(data)
+        }
+        #addAdapterJs(url){
+            return new Promise((rec,rej)=>{
+                setTimeout(()=>{
+                    rej()
+                },5000)
+                var script = document.createElement('script');
+                script.type = 'text/javascript';//IE
+                if(script.readyState){
+                    script.onreadystatechange = function(){
+                        if( script.readyState == 'loaded' || script.readyState == 'complete' ){
+                            script.onreadystatechange = null;
+                            rec();
+                        }
+                    };
+                }else{//其他浏览器
+                    script.onload = function(){rec()};
+                }
+                script.src = url;
+                document.getElementsByTagName('head')[0].appendChild(script);
+            })
+        }
+    }
+
+
+
+    // let ws = new myWS({path:'/websocket/',port:'10001',type:'wss'},()=>{
+    let ws = new myWS({port:':10001'},()=>{
+        $('#myID').html(ws.myID)
+        let rtc = new myRTC(ws,{},that=>{
+            // console.log(that)
+            that.onChannelData(data=>{
+                console.log(data)
+                $("#msgShow").append('<div class="msgBoxBig"><div class="msgBox left">'+data.data+'</div></div>')
+            })
+        });
+        let getuserlistData = {
+            type:'getUserList'
+        }
+        ws.send(JSON.stringify(getuserlistData))
+        let getUserListInterval = setInterval(()=>{
+            // console.log()
+            if(ws.ALLSTATE){
+                ws.send(JSON.stringify(getuserlistData))
+            }else{
+                clearInterval(getUserListInterval)
+            }
+        },5000)
+        ws.onUserList(userList=>{
+            userList = userList.data
+            let userlistDOM = $("#userList");
+            for(let j of userlistDOM.children()){
+                $(j).unbind('click')
+                $(j).remove()
+            }
+            $("#userList").append('<div class="userID" id="myID">'+ws.myID+'</div>')
+            for(let i of userList){
+                if(i == ws.myID){
+                }else{
+                    $("#userList").append('<div class="userID" id="'+i+'">'+i+'</div>')
+                    $("#"+i).click(function (){
+                        window.AK47 = i;
+                        $("#title").html(i)
+                        rtc.start(i)
+                        $("#sendBut").click(function (){
+                            let text = $("#sendText").val();
+                            $("#sendText").val('')
+                            let sendData = {
+                                type: 'TEXT',
+                                from: ws.myID,
+                                to: i,
+                                data: text
+                            }
+                            $("#msgShow").append('<div class="msgBoxBig-r"><div class="msgBox right">'+text+'</div></div>')
+                            rtc.send(JSON.stringify(sendData))
+                        })
+                    })
+                }
+            }
+        })
+    });
+
+</script>
+</html>

@@ -85,7 +85,6 @@ router.post('/getTurnData', async (ctx, next) => {
     const username = ctx.request.jwt.username.toLowerCase();
     try{
         const queryData = await HOMESQL.getTurnData(username);
-        console.log(queryData)
         ctx.body = {
             type:'success',
             message:'请求TURN地址成功',
@@ -99,5 +98,84 @@ router.post('/getTurnData', async (ctx, next) => {
     }
 })
 
+router.post('/addTurnData', async (ctx, next) => {
+    const username = ctx.request.jwt.username.toLowerCase();
+    if(!ctx.request.body.path || !ctx.request.body.username || !ctx.request.body.password){
+        ctx.body = {
+            type:'error',
+            message:'未找到Turn信息',
+        }
+        return false
+    }
+    const turnpath = ctx.request.body.path
+    const turnuser = ctx.request.body.username
+    const turnpass = ctx.request.body.password
+    try{
+        const queryData = await HOMESQL.addTurnData(username, turnpath, turnuser, turnpass);
+        console.log(queryData)
+        ctx.body = {
+            type:'success',
+            message:'添加TURN地址成功',
+        }
+    }catch (e) {
+        ctx.body = {
+            type:'warning',
+            message:'添加Turn地址失败',
+        }
+    }
+})
+
+router.post('/deleteTurnData', async (ctx, next) => {
+    const username = ctx.request.jwt.username.toLowerCase();
+    if(!ctx.request.body.id){
+        ctx.body = {
+            type:'error',
+            message:'未找到Turn信息',
+        }
+        return false
+    }
+    const id = ctx.request.body.id
+    try{
+        const queryData = await HOMESQL.deleteTurnData(username, id);
+        console.log(queryData)
+        ctx.body = {
+            type:'success',
+            message:'删除TURN地址成功',
+        }
+    }catch (e) {
+        ctx.body = {
+            type:'warning',
+            message:'删除Turn地址失败',
+        }
+    }
+})
+
+router.post('/editTurnData', async (ctx, next) => {
+    const username = ctx.request.jwt.username.toLowerCase();
+    if(!ctx.request.body.id || !ctx.request.body.path || !ctx.request.body.username || !ctx.request.body.password){
+        ctx.body = {
+            type:'error',
+            message:'未找到Turn信息',
+        }
+        return false
+    }
+    const id = ctx.request.body.id
+    const turnpath = ctx.request.body.path
+    const turnuser = ctx.request.body.username
+    const turnpass = ctx.request.body.password
+    try{
+        const queryData = await HOMESQL.editTurnData(username, id, turnpath, turnuser, turnpass);
+        console.log(queryData)
+        ctx.body = {
+            type:'success',
+            message:'修改TURN地址成功',
+        }
+    }catch (e) {
+        ctx.body = {
+            type:'warning',
+            message:'修改Turn地址失败',
+        }
+    }
+})
 
 module.exports = router

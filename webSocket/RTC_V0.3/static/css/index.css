@@ -1,0 +1,40 @@
+body{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background-image: url("../img/index.jpg");
+    background-repeat: no-repeat;
+    background-position: center 100%;
+    background-size:cover;
+
+    backdrop-filter: blur(30px);
+}
+#login{
+    position: relative;
+    width: 300px;
+    background: rgba(0,0,0,0.1);
+}
+.title{
+    color: #fff;
+}
+.input input{
+    display: inline-block;
+    width: 100%;
+    /*line-height: 1.3em;*/
+    padding: 0.2rem;
+    margin: 0.2rem 0;
+    box-sizing: border-box;
+}
+.input>div{
+    display: flex;
+}
+.input img{
+    width: 1.3rem;
+    margin: 0.2rem;
+}
+.login{
+    position: relative;
+    font-size: 1.5em;
+    line-height: 2em;
+}

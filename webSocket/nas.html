@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>Nas--测试WebRTC和信令</title>
+</head>
+<body>
+<h1>我是Nas端</h1>
+<h2>
+    <div>NAME</div>
+    <div id="NAME"></div>
+</h2>
+<h2>
+    <div>UUID :</div>
+    <div id="UUID"></div>
+</h2>
+</body>
+<script>
+    /**
+     * 本地允许用户列表
+     * */
+
+    const $CanUserList = [
+        'expressgy'
+    ]
+    console.log('I AM Nas')
+    //  获取自身的识别码
+    function randomString(len) {
+        len = len || 8;
+        let $chars = 'ABCDEFGHJKMNPQRSTWXYZabcdefhijkmnprstwxyz2345678';    /****默认去掉了容易混淆的字符oOLl,9gq,Vv,Uu,I1****/
+        let maxPos = $chars.length;
+        let pwd = '';
+        for (let i = 0; i < len; i++) {
+            pwd += $chars.charAt(Math.floor(Math.random() * maxPos));
+        }
+        return pwd;
+    }
+    // const nasName = 'NAS' + randomString(32)
+    const nasName = 'NAS52sswyxh6em4KByKAp4TrJBEfyb73Jts'
+    document.querySelector('#NAME').innerText = nasName
+    console.log('NAS : ', nasName)
+    const ws = new WebSocket('ws://localhost:10001',nasName);
+
+    //  心跳间隔时间
+    const Timeout = 5000
+    //  心跳包起始
+    let heartNum = 0
+    //  ws状态
+    let state = false
+    //  获取到的自身的uuid
+    let uuid
+    //  连接上服务器时触发
+    ws.onopen = () => {
+        //  握手交互
+        ws.send(JSON.stringify({type:'gy521'}))
+        //  重置心跳包
+        heartNum = 0
+        //  设置连接状态为正常
+        state = true
+        //  与服务器断开连接
+        ws.onclose = () => {
+            console.log('close')
+            //  将连接状态设置为错误
+            state = false
+        }
+        //  接受来自服务器的消息
+        ws.onmessage = data => {
+            let message = null;
+            try{
+                //  将服务端数据转化为JSON格式
+                message = JSON.parse(data.data)
+            }catch (e) {
+                //  如果不能转化为JSON格式，本次消息作废
+                console.log('非JSON字符',data.data)
+                return false
+            }
+            //  输出服务器的消息
+            console.log('Server Message',message)
+            //  判断当前连接状态
+            if(!state) return
+            switch (message.type){
+                case 'gy521':
+                    //  开始
+                    //  读取自身UUID
+                    uuid = message.uuid
+                    document.querySelector('#UUID').innerText = uuid
+                    console.log('开始:',uuid)
+                    //  发送心跳起始包
+                    ws.send(
+                        JSON.stringify({
+                            type:'heart',
+                            heartNum
+                        })
+                    )
+                    break
+                case 'heart':
+                    //  心跳
+                    //  判断心跳是否丢失
+                    if(message.heartNum - 1 != heartNum) {
+                        console.log('系统故障，心跳丢失')
+                        ws.close()
+                        return false
+                    }else{
+                        heartNum += 2
+                    }
+                    //  设置延迟发送心跳包
+                    setTimeout(() => {
+                        ws.send(
+                            JSON.stringify({
+                                type:'heart',
+                                heartNum : heartNum
+                            })
+                        )
+                    },Timeout)
+                    break
+                case 'createConnection':
+                    console.log('请求建立RTC连接')
+                    console.log($CanUserList)
+                    console.log(message.data.username)
+                    if($CanUserList.indexOf(message.data.username) > -1){
+                        //  请求用户存在于本地记录
+                        ws.send(JSON.stringify({
+                            type:'createConnection',
+                            data:{
+                                type:'response',
+                                state:true,
+                                master:message.data.userUUID,
+                                message:'已授权此用户'
+                            }
+                        }))
+                    }else{
+                        //  不存在拒绝连接
+                        ws.send(JSON.stringify({
+                            type:'createConnection',
+                            data:{
+                                type:'response',
+                                state:false,
+                                master:message.data.userUUID,
+                                message:'此用户未被授权'
+                            }
+                        }))
+                    }
+                    break
+                case 'RTC':
+                    const rg = {
+                        type:'RTC',
+                        data:{
+                            type:'ICE || balabala'
+                        }
+                    }
+                    console.log('RTC')
+                    break
+            }
+        }
+    }
+    ws.onerror = e => {
+        console.log('error',e)
+    }
+
+
+</script>
+</html>

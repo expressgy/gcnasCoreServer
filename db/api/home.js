@@ -82,7 +82,7 @@ async function getTurnData(username){
             database :DB_NAME
         });
         connection.connect();
-        const SQL = `select * from user_turn where username = ? ;`
+        const SQL = `select * from user_turn where username = ? and state = 1 ;`
         connection.query(SQL,[username],(err, results) => {
             if(err){
                 rej(err)
@@ -94,9 +94,77 @@ async function getTurnData(username){
     })
 }
 
+async function addTurnData(username, turnpath, turnuser, turnpass){
+    return new Promise(async (rec,rej) => {
+        const connection = mysql.createConnection({
+            host:DB_HOST,
+            user:DB_USER,
+            password:DB_PASSWD,
+            database :DB_NAME
+        });
+        connection.connect();
+        const createtime = new Date().getTime()
+        const SQL = `INSERT INTO user_turn (username, turnpath, turnuser, turnpass, createtime, state) VALUES (?, ?, ?, ?, ?, 1);`
+        connection.query(SQL,[username, turnpath, turnuser, turnpass, createtime],(err, results) => {
+            if(err){
+                rej(err)
+            }else{
+                rec()
+            }
+            connection.end()
+        })
+    })
+}
+
+async function deleteTurnData(username,id){
+    return new Promise(async (rec,rej) => {
+        const connection = mysql.createConnection({
+            host:DB_HOST,
+            user:DB_USER,
+            password:DB_PASSWD,
+            database :DB_NAME
+        });
+        connection.connect();
+        const SQL = `update user_turn set state = 0 where username = ? and id = ? ;`
+        connection.query(SQL,[username, id],(err, results) => {
+            if(err){
+                rej(err)
+            }else{
+                rec()
+            }
+            connection.end()
+        })
+    })
+}
+
+async function editTurnData(username, id, turnpath, turnuser, turnpass){
+    return new Promise(async (rec,rej) => {
+        const connection = mysql.createConnection({
+            host:DB_HOST,
+            user:DB_USER,
+            password:DB_PASSWD,
+            database :DB_NAME
+        });
+        connection.connect();
+        const SQL = `update user_turn set turnpath = ?, turnuser = ?, turnpass = ? where username = ? and id = ? ;`
+        connection.query(SQL,[turnpath, turnuser, turnpass, username, id],(err, results) => {
+            if(err){
+                console.log(err)
+                rej(err)
+            }else{
+                rec()
+            }
+            connection.end()
+        })
+    })
+}
+
 module.exports = {
     getUserInfo,
     updateUserInfo,
     updateUserPass,
-    getTurnData
+    getTurnData,
+    addTurnData,
+    deleteTurnData,
+    editTurnData
 }

@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>Client--测试WebRTC和信令</title>
+</head>
+<body>
+<h1>我是浏览器端</h1>
+<h2>
+    <div>NAME</div>
+    <div id="NAME"></div>
+</h2>
+<h2>
+    <div>UUID :</div>
+    <div id="UUID"></div>
+</h2>
+<div>
+    <button id="CreateConnect">建立连接</button>
+    <div>NasName<input id="NasName" type="text"></div>
+</div>
+</body>
+<script>
+    console.log('I AM Client')
+    //  获取自身的识别码
+    const Token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImV4cHJlc3NneSIsImlhdCI6MTY0ODEyODgyOTM2NCwiZXhwIjoyNTkyMDAwMDAwfQ.dIqVLBx__-uIN4QvINUUhBysDm9BxQrAWuGTD4j7YqY'
+    document.querySelector('#NAME').innerText = Token
+    console.log('Client : ', Token)
+
+
+
+    class signalling{
+        //  WebSocket对象
+        #ws
+        //  心跳间隔时间
+        #Timeout = 5000
+        //  心跳包起始
+        #heartNum = 0
+        //  ws状态
+        state = false
+        //  获取到的自身的uuid
+        #uuid
+        //  连接上服务器时触发
+        constructor(Token) {
+            this.#ws = new WebSocket('ws://localhost:10001',Token);
+            this.#ws.onerror = e => console.log('error',e)
+            this.#ws.onopen = () => {
+                //  握手交互
+                this.#ws.send(JSON.stringify({type:'gy521'}))
+                //  重置心跳包
+                this.#heartNum = 0
+                //  设置连接状态为正常
+                this.state = true
+                //  与服务器断开连接
+                this.#ws.onclose = () => {
+                    console.log('close')
+                    //  将连接状态设置为错误
+                    this.state = false
+                }
+            }
+            this.#ws.onmessage = data => {
+                let message = null;
+                try{
+                    //  将服务端数据转化为JSON格式
+                    message = JSON.parse(data.data)
+                }catch (e) {
+                    //  如果不能转化为JSON格式，本次消息作废
+                    console.log('非JSON字符',data.data)
+                    return false
+                }
+                //  输出服务器的消息
+                // console.log('Server Message',message)
+                //  判断当前连接状态
+                if(message.type != 'heart') console.log(message)
+                if(!this.state) return
+                switch (message.type) {
+                    case 'gy521':
+                        //  开始
+                        //  读取自身UUID
+                        this.#uuid = message.uuid
+                        document.querySelector('#UUID').innerText = this.#uuid
+                        console.log('开始:', this.#uuid)
+                        //  发送心跳起始包
+                        this.#ws.send(
+                            JSON.stringify({
+                                type: 'heart',
+                                heartNum:this.#heartNum
+                            })
+                        )
+                        break
+                    case 'heart':
+                        //  心跳
+                        //  判断心跳是否丢失
+                        if (message.heartNum - 1 != this.#heartNum) {
+                            console.log('系统故障，心跳丢失')
+                            this.#ws.close()
+                            return false
+                        } else {
+                            this.#heartNum += 2
+                        }
+                        //  设置延迟发送心跳包
+                        setTimeout(() => {
+                            this.#ws.send(
+                                JSON.stringify({
+                                    type: 'heart',
+                                    heartNum: this.#heartNum
+                                })
+                            )
+                        }, this.#Timeout)
+                        break
+                }
+            }
+        }
+        //  主动关闭ws
+        close(){
+            this.#ws ? this.#ws.close() : false
+        }
+        createConnection(nasName){
+            return new Promise(rec => {
+                this.#ws.send(JSON.stringify({
+                    type:'createConnection',
+                    data:{
+                        type:'request',
+                        master:nasName
+                    }
+                }))
+                setTimeout(() => {
+                    rec(false)
+                },3000)
+                this.#ws.addEventListener('message',data => {
+                    let message = null;
+                    try{
+                        //  将服务端数据转化为JSON格式
+                        message = JSON.parse(data.data)
+                    }catch (e) {
+                        //  如果不能转化为JSON格式，本次消息作废
+                        console.log('非JSON字符',data.data)
+                        return false
+                    }
+                    if(message.type == 'createConnection'){
+                        rec(message)
+                    }
+
+                })
+            })
+        }
+    }
+
+    async function start(){
+        const sl = new signalling(Token)
+
+//    开始业务
+        const click = document.querySelector('#CreateConnect')
+        const input = document.querySelector('#NasName')
+        click.onclick = async event => {
+
+            // const mubiaoNasName = input.value
+            const mubiaoNasName = '52sswyxh6em4KByKAp4TrJBEfyb73Jts'
+            const canConnection = await sl.createConnection(mubiaoNasName)
+            console.log(canConnection.data.message)
+            if(!canConnection.data.state)return false
+            //  进行点对点连接
+        }
+    }
+
+    start()
+
+
+
+</script>
+</html>

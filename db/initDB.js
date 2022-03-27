@@ -197,6 +197,7 @@ class initDB{
             'turnpath varchar(256),' +
             'turnuser varchar(256),' +
             'turnpass varchar(256),' +
+            'state int(1),' +
             'createtime bigint(13))'
         this.connection.query(createUserTURNSQL,(err,data) => {
             if(err) throw {TB:'user_turn',code:err.code,errno:err.errno,sqlMessage:err.sqlMessage}

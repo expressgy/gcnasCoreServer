@@ -16,8 +16,13 @@ const EMAILCONFIG = {
     PASS:'opkcqsqetuxqdebg'
 }
 
+const WEBSOCKETCONFIG = {
+    PORT:10001
+}
+
 module.exports = {
     DBCONFIG,
     JWTCONFIG,
-    EMAILCONFIG
+    EMAILCONFIG,
+    WEBSOCKETCONFIG
 }

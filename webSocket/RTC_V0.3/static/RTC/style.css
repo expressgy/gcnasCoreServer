@@ -1,0 +1,27 @@
+body,html{
+  position: relative;
+  margin: 0;
+  height: 100%;
+  width: 100%;
+}
+body{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  user-select: none
+}
+#sendsss{
+  position: relative;
+  text-align: center;
+}
+#sendsss>div:last-child{
+  padding: 0.4rem 1rem;
+  box-sizing: border-box;
+  background: #333;
+  border-radius: 5px;
+  color:#fefefe;
+  margin: 1rem auto;
+  width: 5rem;
+  cursor: pointer
+}
