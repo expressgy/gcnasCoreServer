@@ -34,11 +34,11 @@ const listening = () => console.log('信令服务启动')
 let $NasList = {}
 let $UserList = {}
 
-const defaultIceConfig = {
-    "urls": ["stun:ali.togy.top:3478","turn:ali.togy.top:3478"],
+const defaultIceConfig = [{
+    "urls": "stun:ali.togy.top:3478",
     "username": "nie",
     "credential": "Hxl1314521"
-}
+}]
 
 
 

@@ -157,7 +157,7 @@
                     }
                     break
                 case 'ICE':
-                    $RTCList[message.data.rtcName].RTC.addIceCandidate(message.data.ice)
+                    $RTCList[message.data.rtcName].RTC.setICE(message.data.ice)
                     break
                 case 'RTC':
                     const rg = {
@@ -179,22 +179,23 @@
     //  收到建立RTC请求后，执行开始创建RTC
     async function createRTC(rtcName, offer){
         //  初始化ICE配置
-        $RTCList[rtcName].RTC = new nasWebRTC(defaultIceConfig,[])
-        //  创建RTC
-        await $RTCList[rtcName].RTC.createRTC()
-        //  创建本地描述文件
-        $RTCList[rtcName].RTC.candidateICE(ice => {
-            ws.send(JSON.stringify({
-                type:'ICE',
-                device:'nas',
-                state:true,
-                data:{
-                    rtcName,
-                    from:uuid,
-                    to:$RTCList[rtcName].requestUUID,
-                    ice
-                }
-            }))
+        $RTCList[rtcName].RTC = new N_RTC(defaultIceConfig)
+        await $RTCList[rtcName].RTC.initN_RTC(ice => {
+            console.log('SEND')
+            setTimeout(() => {
+                ws.send(JSON.stringify({
+                    type:'ICE',
+                    device:'nas',
+                    state:true,
+                    data:{
+                        rtcName,
+                        from:uuid,
+                        to:$RTCList[rtcName].requestUUID,
+                        ice:ice.candidate
+                    }
+                },1000))
+            })
+
         })
         const answer = await $RTCList[rtcName].RTC.makeAnswer(offer)
         //  发送描述文件
@@ -208,18 +209,17 @@
                 answer
             }
         }))
+        console.log('END')
     }
 
     //  RTC
-    class nasWebRTC {
-        #iceConfig
-        #rtcConfig
+    class N_RTC{
+        #defaultIceConfig
         #RTC
-        #channel
-        constructor(defaultIceConfig,userIceConfig) {
-            this.#iceConfig = [defaultIceConfig].concat(userIceConfig)
+        constructor(iceConfig) {
+            this.#defaultIceConfig = iceConfig
         }
-        async createHash(){
+        #makeHash(){
             return new Promise(async rec => {
                 const generateConfig = {
                     name: 'RSASSA-PKCS1-v1_5',
@@ -228,50 +228,33 @@
                     publicExponent: new Uint8Array([1, 0, 1])
                 }
                 const cert = await RTCPeerConnection.generateCertificate(generateConfig)
-                this.#rtcConfig = {
-                    certificates:[cert],
-                    iceServers:this.#iceConfig
+                const rtcOption = {
+                    certificates : [cert],
+                    iceServers: this.#defaultIceConfig
                 }
-                rec()
+                rec(rtcOption)
             })
         }
-        async createRTC(){
-            return new Promise(async rec => {
-                this.createHash()
-                this.#RTC = new RTCPeerConnection(this.#rtcConfig);
-                this.#createDataChannel()
-                rec()
-            })
-        }
-        #createDataChannel(){
-            this.#channel = this.#RTC.createDataChannel('MyData');
-
-            this.#channel.onopen = ()=>{
-                console.log('DataChannel is Open')
-            }
-            this.#RTC.ondatachannel = event=>{
-                event.channel.onmessage = msg=>{
-                    console.log('DataChannel Msg : ' , msg.data)
-                }
-                event.channel.onopen = ()=>{console.log('DataChannel is Open')}
-                event.channel.onclose = ()=>{console.log('DataChannel is Close')}
-                event.channel.onerror = (e)=>{console.log('DataChannel is error',e)}
-            }
+        async initN_RTC(callback){
+            const rtcOption = await this.#makeHash()
+            this.#RTC = new RTCPeerConnection(rtcOption)
+            this.RTCD = this.#RTC.createDataChannel('GY')
+            this.#RTC.onicecandidate = callback
+            setInterval(() => {
+                console.log('iceConnectionState',this.#RTC.iceConnectionState)
+                console.log('connectionState',this.#RTC.connectionState)
+            },1000)
         }
         makeAnswer(offer){
-            //  设置远端Offer
             return new Promise(async rec => {
                 await this.#RTC.setRemoteDescription(offer)
                 const answer = await this.#RTC.createAnswer()
-                this.#RTC.setLocalDescription(answer)
+                await this.#RTC.setLocalDescription(answer);
                 rec(answer)
             })
         }
-        candidateICE(callback){
-            this.#RTC.onicecandidate = callback
-        }
-        addIceCandidate(ice){
-            this.#RTC.addIceCandidate(ice.candidate)
+        setICE(ice){
+            this.#RTC.addIceCandidate(ice)
         }
     }
 </script>

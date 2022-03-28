@@ -20,9 +20,23 @@
 </div>
 </body>
 <script>
-    console.log('I AM Client')
-    //  获取自身的识别码
+    /**
+     * 基础信息
+     * */
     const Token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImV4cHJlc3NneSIsImlhdCI6MTY0ODEyODgyOTM2NCwiZXhwIjoyNTkyMDAwMDAwfQ.dIqVLBx__-uIN4QvINUUhBysDm9BxQrAWuGTD4j7YqY'
+    const webSocketPath = 'ws://localhost:10001'
+
+    const defaultIceConfig = [{
+        urls: "stun:ali.togy.top:3478",
+        username: "nie",
+        credential: "Hxl1314521"
+    }]
+    const offerOption = {
+        offerToReceiveAudio:false,
+        offerToReceiveVideo:false
+    }
+
+
     document.querySelector('#NAME').innerText = Token
     console.log('Client : ', Token)
 
@@ -36,6 +50,9 @@
         }
         return pwd;
     }
+
+
+
 
 
     //  信令服务
@@ -52,11 +69,12 @@
         #uuid
         //  连接上服务器时触发
         defaultIceConfig
-        constructor(Token) {
-            this.#ws = new WebSocket('ws://localhost:10001',Token);
+        //  与信令服务建立通信时的初始化操作
+
+        constructor(webSocketPath, Token) {
+            this.#ws = new WebSocket(webSocketPath, Token);
             this.#ws.onerror = e => console.log('error',e)
             this.#ws.onopen = () => {
-                //  握手交互
                 this.#ws.send(JSON.stringify({type:'gy521'}))
                 //  重置心跳包
                 this.#heartNum = 0
@@ -71,16 +89,12 @@
             }
             this.#ws.onmessage = data => {
                 let message = null;
-                try{
-                    //  将服务端数据转化为JSON格式
+                try{    //  将服务端数据转化为JSON格式
                     message = JSON.parse(data.data)
-                }catch (e) {
-                    //  如果不能转化为JSON格式，本次消息作废
+                }catch (e) {    //  如果不能转化为JSON格式，本次消息作废
                     console.log('非JSON字符',data.data)
                     return false
                 }
-                //  输出服务器的消息
-                // console.log('Server Message',message)
                 //  判断当前连接状态
                 if(message.type != 'heart') console.log('Server Message',message)
                 if(!this.state) return
@@ -89,9 +103,8 @@
                         //  开始
                         //  读取自身UUID
                         this.#uuid = message.uuid
+                        //  服务器传来的ice信息
                         this.defaultIceConfig = message.defaultIceConfig
-                        document.querySelector('#UUID').innerText = this.#uuid
-                        console.log('开始:', this.#uuid)
                         //  发送心跳起始包
                         this.#ws.send(
                             JSON.stringify({
@@ -222,21 +235,13 @@
         }
     }
     //  RTC
-    class userWebRTC{
-        #iceConfig
-        #mediaConfig = {
-            offerToReceiveAudio : false,
-            offerToReceiveVideo : false
-        }
-        #rtcConfig
+    class U_RTC{
+        #defaultIceConfig
         #RTC
-        #channel
-        constructor(defaultIceConfig,userIceConfig) {
-            //  初始化iceConfig信息
-            this.#iceConfig = [defaultIceConfig].concat(userIceConfig)
+        constructor(iceConfig) {
+            this.#defaultIceConfig = iceConfig
         }
-        async #createHash(){
-            //  为RTC加密
+        #makeHash(){
             return new Promise(async rec => {
                 const generateConfig = {
                     name: 'RSASSA-PKCS1-v1_5',
@@ -245,68 +250,48 @@
                     publicExponent: new Uint8Array([1, 0, 1])
                 }
                 const cert = await RTCPeerConnection.generateCertificate(generateConfig)
-                this.#rtcConfig = {
-                    certificates:[cert],
-                    iceServers:this.#iceConfig
+                const rtcOption = {
+                    certificates : [cert],
+                    iceServers: this.#defaultIceConfig
                 }
-                rec()
+                rec(rtcOption)
             })
         }
-        async createRTC(){
-            return new Promise(async rec => {
-                await this.#createHash()
-                this.#RTC = new RTCPeerConnection(this.#rtcConfig);
-                this.#createDataChannel()
-                // setInterval(()=>{
-                //     console.log('iceConnectionState',this.#RTC.iceConnectionState)
-                //     console.log('connectionState',this.#RTC.connectionState)
-                // },1000)
-                rec()
-            })
-        }
-        #createDataChannel(){
-            this.#channel = this.#RTC.createDataChannel('MyData');
-            this.#channel.onopen = ()=>{
-                console.log('DataChannel is Open')
-                let heart = {
-                    type:'P2PHEART'
-                }
-                const channelHeartInterval = setInterval(()=>{
-                    this.#channel.send(JSON.stringify(heart))
-                },1500)
-            }
-
-            this.#channel.onopen = ()=>{
-                console.log('DataChannel is Open')
-            }
-        }
-        makeOffer(){
-            return new Promise(async rec => {
-                try{
-                    const offer = await this.#RTC.createOffer(this.#mediaConfig)
-                    await this.#RTC.setLocalDescription(offer)
-                    rec(offer)
-                }catch (e) {
-                    console.log('创建RTC：获取本地描述失败',e)
-                }
-            })
-        }
-        setAnswer(answer,callback){
-            this.#RTC.setRemoteDescription(answer);
+        async initU_RTC(callback){
+            const rtcOption = await this.#makeHash()
+            console.log(rtcOption)
+            this.#RTC = new RTCPeerConnection(rtcOption)
+            this.RTCD = this.#RTC.createDataChannel('GYSSS')
             this.#RTC.onicecandidate = callback
+            setInterval(() => {
+                console.log('iceConnectionState',this.#RTC.iceConnectionState)
+                console.log('connectionState',this.#RTC.connectionState)
+            },1000)
         }
-        addIceCandidate(ice){
-            this.#RTC.addIceCandidate(ice.candidate)
+        createOffer(){
+            return new Promise(async rec => {
+                const offerOption = {
+                    offerToReceiveAudio:false,
+                    offerToReceiveVideo:false
+                }
+                const offer = await this.#RTC.createOffer(offerOption)
+                await this.#RTC.setLocalDescription(offer)
+                rec(offer)
+            })
+        }
+        setAnswer(answer){
+            this.#RTC.setRemoteDescription(answer)
+        }
+        setICE(ice){
+            this.#RTC.addIceCandidate(ice)
         }
     }
 
     async function start(){
-        const sl = new signalling(Token)
-//    开始业务
+        const sl = new signalling(webSocketPath, Token)
+        //    开始业务
         const click = document.querySelector('#CreateConnect')
-        const input = document.querySelector('#NasName')
         click.onclick = async event => {
-            // const mubiaoNasName = input.value
             const mubiaoNasName = '52sswyxh6em4KByKAp4TrJBEfyb73Jts'
             const canConnection = await sl.createConnection(mubiaoNasName)
             if(!canConnection.data.state)return false
@@ -316,32 +301,27 @@
             //  获取默认ICE配置
             const defaultIceConfig = sl.getIceConfig()
             //  初始化ICE配置
-            const oneRTC = new userWebRTC(defaultIceConfig,[])
-            //  创建RTC
-            await oneRTC.createRTC()
-            //  创建本地描述文件
-            const offer = await oneRTC.makeOffer()
-            //  发送描述文件
-            const answer = await sl.createRTC(master, offer, rtcName)
-            //  设置远端ICE，提前监听
+            const userRTC = new U_RTC(defaultIceConfig)
             sl.onICE(master,ice => {
-                oneRTC.addIceCandidate(ice)
+                userRTC.setICE(ice)
             })
-            //  设置远端description
-            oneRTC.setAnswer(answer,data => {
-                if(data.candidate){
-                    //  开始交换ice信息
-                    sl.sendICE(master, data, rtcName)
-                }else{
-                    console.log('ICE协商结束')
-                }
+            await userRTC.initU_RTC(ice => {
+                console.log('生成ICE')
+                setTimeout(() => {
+                    if(ice.candidate){
+                        //  开始交换ice信息
+                        sl.sendICE(master, ice.candidate, rtcName)
+                    }else{
+                        console.log('ICE协商结束')
+                    }
+                },1000)
+
             })
+            const offer = await userRTC.createOffer()
+            const answer = await sl.createRTC(master, offer, rtcName)
+            userRTC.setAnswer(answer)
         }
     }
-
     start()
-
-
-
 </script>
 </html>

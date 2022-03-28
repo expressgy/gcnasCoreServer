@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>User</title>
+</head>
+<body>
+
+</body>
+<script>
+
+    const defaultIceConfig = [{
+        urls: "stun:ali.togy.top:3478",
+        username: "nie",
+        credential: "Hxl1314521"
+    }]
+    const offerOption = {
+        offerToReceiveAudio:false,
+        offerToReceiveVideo:false
+    }
+
+    class U_RTC{
+        #defaultIceConfig
+        #RTC
+        constructor(iceConfig) {
+            this.#defaultIceConfig = iceConfig
+        }
+        #makeHash(){
+            return new Promise(async rec => {
+                const generateConfig = {
+                    name: 'RSASSA-PKCS1-v1_5',
+                    hash: 'SHA-256',
+                    modulusLength: 2048,
+                    publicExponent: new Uint8Array([1, 0, 1])
+                }
+                const cert = await RTCPeerConnection.generateCertificate(generateConfig)
+                const rtcOption = {
+                    certificates : [cert],
+                    iceServers: this.#defaultIceConfig
+                }
+                rec(rtcOption)
+            })
+        }
+        async initU_RTC(callback){
+            const rtcOption = await this.#makeHash()
+            this.#RTC = new RTCPeerConnection(rtcOption)
+            this.RTCD = this.#RTC.createDataChannel('GY')
+            this.#RTC.onicecandidate = callback
+            setInterval(() => {
+                console.log('iceConnectionState',this.#RTC.iceConnectionState)
+                console.log('connectionState',this.#RTC.connectionState)
+            },1000)
+        }
+        createOffer(){
+            return new Promise(async rec => {
+                const offerOption = {
+                    offerToReceiveAudio:false,
+                    offerToReceiveVideo:false
+                }
+                const offer = await this.#RTC.createOffer(offerOption)
+                await this.#RTC.setLocalDescription(offer)
+                rec(offer)
+            })
+        }
+        setAnswer(answer){
+            this.#RTC.setRemoteDescription(answer)
+        }
+        setICE(ice){
+            this.#RTC.addIceCandidate(ice)
+        }
+    }
+    class N_RTC{
+        #defaultIceConfig
+        #RTC
+        constructor(iceConfig) {
+            this.#defaultIceConfig = iceConfig
+        }
+        #makeHash(){
+            return new Promise(async rec => {
+                const generateConfig = {
+                    name: 'RSASSA-PKCS1-v1_5',
+                    hash: 'SHA-256',
+                    modulusLength: 2048,
+                    publicExponent: new Uint8Array([1, 0, 1])
+                }
+                const cert = await RTCPeerConnection.generateCertificate(generateConfig)
+                const rtcOption = {
+                    certificates : [cert],
+                    iceServers: this.#defaultIceConfig
+                }
+                rec(rtcOption)
+            })
+        }
+        async initN_RTC(callback){
+            const rtcOption = await this.#makeHash()
+            this.#RTC = new RTCPeerConnection(rtcOption)
+            this.RTCD = this.#RTC.createDataChannel('GY')
+            this.#RTC.onicecandidate = callback
+            setInterval(() => {
+                console.log('iceConnectionState',this.#RTC.iceConnectionState)
+                console.log('connectionState',this.#RTC.connectionState)
+            },1000)
+        }
+        makeAnswer(offer){
+            return new Promise(async rec => {
+                await this.#RTC.setRemoteDescription(offer)
+                const answer = await this.#RTC.createAnswer()
+                await this.#RTC.setLocalDescription(answer);
+                rec(answer)
+            })
+        }
+        setICE(ice){
+            this.#RTC.addIceCandidate(ice)
+        }
+    }
+
+    async function test(){
+        const pc1 = new U_RTC(defaultIceConfig)
+        const pc2 = new N_RTC(defaultIceConfig)
+        await pc1.initU_RTC(e => {
+            console.log('设置PC2的ice')
+            pc2.setICE(e.candidate)
+        })
+        await pc2.initN_RTC(e => {
+            console.log('设置PC1的ice')
+            pc1.setICE(e.candidate)
+        })
+
+        const offer = await pc1.createOffer()
+        const answer = await pc2.makeAnswer(offer)
+        pc1.setAnswer(answer)
+        console.log('GO')
+    }
+    test()
+</script>
+</html>

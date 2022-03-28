@@ -434,7 +434,6 @@
             await this.#pc.setLocalDescription(description)
             this.#sendOffer(description)
 
-
         }
         #createDataChannel(){
             this.#channel = this.#pc.createDataChannel('MyData');
