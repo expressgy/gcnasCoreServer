@@ -23,6 +23,11 @@
     const $CanUserList = [
         'expressgy'
     ]
+    const $RTCList = {}
+    /**
+     * 获取信令服务器派发的默认iceConfig
+     * */
+    let defaultIceConfig;
     console.log('I AM Nas')
     //  获取自身的识别码
     function randomString(len) {
@@ -75,7 +80,7 @@
                 return false
             }
             //  输出服务器的消息
-            console.log('Server Message',message)
+            if(message.type != 'heart') console.log('Server Message',message)
             //  判断当前连接状态
             if(!state) return
             switch (message.type){
@@ -83,6 +88,8 @@
                     //  开始
                     //  读取自身UUID
                     uuid = message.uuid
+                    defaultIceConfig = message.defaultIceConfig
+                    console.log('defaultIceConfig',defaultIceConfig)
                     document.querySelector('#UUID').innerText = uuid
                     console.log('开始:',uuid)
                     //  发送心跳起始包
@@ -114,16 +121,19 @@
                     },Timeout)
                     break
                 case 'createConnection':
-                    console.log('请求建立RTC连接')
-                    console.log($CanUserList)
-                    console.log(message.data.username)
                     if($CanUserList.indexOf(message.data.username) > -1){
                         //  请求用户存在于本地记录
+                        $RTCList[message.data.rtcName] = {
+                            requestUser: message.data.username,
+                            requestTime: new Date().getTime(),
+                            requestUUID: message.data.userUUID
+                        }
                         ws.send(JSON.stringify({
                             type:'createConnection',
                             data:{
                                 type:'response',
                                 state:true,
+                                rtcName:message.data.rtcName,
                                 master:message.data.userUUID,
                                 message:'已授权此用户'
                             }
@@ -140,6 +150,14 @@
                             }
                         }))
                     }
+                    break
+                case 'createRTC':
+                    if(Object.keys($RTCList).indexOf(message.data.rtcName) > -1){
+                        createRTC(message.data.rtcName,message.data.offer)
+                    }
+                    break
+                case 'ICE':
+                    $RTCList[message.data.rtcName].RTC.addIceCandidate(message.data.ice)
                     break
                 case 'RTC':
                     const rg = {
@@ -158,5 +176,103 @@
     }
 
 
+    //  收到建立RTC请求后，执行开始创建RTC
+    async function createRTC(rtcName, offer){
+        //  初始化ICE配置
+        $RTCList[rtcName].RTC = new nasWebRTC(defaultIceConfig,[])
+        //  创建RTC
+        await $RTCList[rtcName].RTC.createRTC()
+        //  创建本地描述文件
+        $RTCList[rtcName].RTC.candidateICE(ice => {
+            ws.send(JSON.stringify({
+                type:'ICE',
+                device:'nas',
+                state:true,
+                data:{
+                    rtcName,
+                    from:uuid,
+                    to:$RTCList[rtcName].requestUUID,
+                    ice
+                }
+            }))
+        })
+        const answer = await $RTCList[rtcName].RTC.makeAnswer(offer)
+        //  发送描述文件
+        ws.send(JSON.stringify({
+            type:'createRTC',
+            data:{
+                type:'response',
+                rtcName,
+                from:uuid,
+                to:$RTCList[rtcName].requestUUID,
+                answer
+            }
+        }))
+    }
+
+    //  RTC
+    class nasWebRTC {
+        #iceConfig
+        #rtcConfig
+        #RTC
+        #channel
+        constructor(defaultIceConfig,userIceConfig) {
+            this.#iceConfig = [defaultIceConfig].concat(userIceConfig)
+        }
+        async createHash(){
+            return new Promise(async rec => {
+                const generateConfig = {
+                    name: 'RSASSA-PKCS1-v1_5',
+                    hash: 'SHA-256',
+                    modulusLength: 2048,
+                    publicExponent: new Uint8Array([1, 0, 1])
+                }
+                const cert = await RTCPeerConnection.generateCertificate(generateConfig)
+                this.#rtcConfig = {
+                    certificates:[cert],
+                    iceServers:this.#iceConfig
+                }
+                rec()
+            })
+        }
+        async createRTC(){
+            return new Promise(async rec => {
+                this.createHash()
+                this.#RTC = new RTCPeerConnection(this.#rtcConfig);
+                this.#createDataChannel()
+                rec()
+            })
+        }
+        #createDataChannel(){
+            this.#channel = this.#RTC.createDataChannel('MyData');
+
+            this.#channel.onopen = ()=>{
+                console.log('DataChannel is Open')
+            }
+            this.#RTC.ondatachannel = event=>{
+                event.channel.onmessage = msg=>{
+                    console.log('DataChannel Msg : ' , msg.data)
+                }
+                event.channel.onopen = ()=>{console.log('DataChannel is Open')}
+                event.channel.onclose = ()=>{console.log('DataChannel is Close')}
+                event.channel.onerror = (e)=>{console.log('DataChannel is error',e)}
+            }
+        }
+        makeAnswer(offer){
+            //  设置远端Offer
+            return new Promise(async rec => {
+                await this.#RTC.setRemoteDescription(offer)
+                const answer = await this.#RTC.createAnswer()
+                this.#RTC.setLocalDescription(answer)
+                rec(answer)
+            })
+        }
+        candidateICE(callback){
+            this.#RTC.onicecandidate = callback
+        }
+        addIceCandidate(ice){
+            this.#RTC.addIceCandidate(ice.candidate)
+        }
+    }
 </script>
 </html>

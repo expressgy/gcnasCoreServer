@@ -315,6 +315,18 @@
             this.WS.send(data)
         }
     }
+
+
+
+
+
+
+
+
+
+
+
+
     class myRTC{
         #SL
         #myID
@@ -393,10 +405,14 @@
                 console.log('connectionState',this.#pc.connectionState)
             },1000)
 
-
-
+            /**
+             * 受邀请者接收到offer，设置本地描述文件
+             *
+             * */
             this.#SL.onOffer(offerData=>{
+                //  设置远程描述文件
                 this.#pc.setRemoteDescription(offerData.data)
+                //  创建
                 this.#pc.createAnswer().then(answer=>{
                     this.#pc.setLocalDescription(answer);
                     this.#userID = offerData.from

@@ -34,6 +34,13 @@ const listening = () => console.log('信令服务启动')
 let $NasList = {}
 let $UserList = {}
 
+const defaultIceConfig = {
+    "urls": ["stun:ali.togy.top:3478","turn:ali.togy.top:3478"],
+    "username": "nie",
+    "credential": "Hxl1314521"
+}
+
+
 
 
 const connection = async (ws, info) => {
@@ -55,6 +62,7 @@ const connection = async (ws, info) => {
         $NasList[uuid] = GY
         ws.send(JSON.stringify({
             type:'gy521',
+            defaultIceConfig,
             uuid
         }))
     }else{
@@ -74,6 +82,7 @@ const connection = async (ws, info) => {
             ws.GY = GY
             ws.send(JSON.stringify({
                 type:'gy521',
+                defaultIceConfig,
                 uuid
             }))
         }else{
@@ -148,6 +157,7 @@ const onmessage = (ws, data) => {
                             type:'createConnection',
                             data:{
                                 type:'request',
+                                rtcName:message.data.rtcName,
                                 username:ws.GY.username,
                                 userUUID:ws.GY.uuid
                             }
@@ -175,10 +185,36 @@ const onmessage = (ws, data) => {
                             type: 'response',
                             state: message.data.state,
                             master: ws.GY.uuid,
-                            message: message.data.message
+                            message: message.data.message,
+                            rtcName: message.data.rtcName
                         }
                     }))
+                    break
             }
+            break
+        //  开始建立RTC
+        case 'createRTC':
+            switch (message.data.type){
+                case 'request':
+                    console.log('发送RTC连接描述')
+                    $NasList[message.data.to].ws.send(data.toString())
+                    break
+                case 'response':
+                    $UserList[message.data.to].ws.send(data.toString())
+                    break
+            }
+            break
+        //  交换ICE
+        case 'ICE':
+            switch (message.device){
+                case 'user':
+                    $NasList[message.data.to].ws.send(data.toString())
+                    break
+                case 'nas' :
+                    $UserList[message.data.to].ws.send(data.toString())
+                    break
+            }
+            break
     }
 }
 
