@@ -97,6 +97,10 @@ const connection = async (ws, info) => {
     })
     ws.onerror = e => console.log(e)
     ws.onclose = () => {
+        if(!ws.GY){
+            return
+        }
+        console.log(ws.GY)
         console.log(uuid,'关闭',ws.GY.type)
         ws.state = false
         if(ws.GY.type == 'nas'){

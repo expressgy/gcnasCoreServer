@@ -11,6 +11,7 @@ const index = require('./routes/index')
     , sign = require('./routes/api/sign')
     , login = require('./routes/api/login')
     , home = require('./routes/api/home')
+    , localNas = require('./routes/api/localNas')
 
 const {decryptToken} = require('./jwt')
 
@@ -82,6 +83,7 @@ app.use(sign.routes(), sign.allowedMethods())
 app.use(login.routes(), login.allowedMethods())
 
 app.use(home.routes(), home.allowedMethods())
+app.use(localNas.routes(), localNas.allowedMethods())
 
 // error-handling
 app.on('error', (err, ctx) => {

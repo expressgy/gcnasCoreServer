@@ -238,6 +238,8 @@
     class U_RTC{
         #defaultIceConfig
         #RTC
+        #onMessage
+        #RTCD_HEART
         constructor(iceConfig) {
             this.#defaultIceConfig = iceConfig
         }
@@ -261,12 +263,15 @@
             const rtcOption = await this.#makeHash()
             console.log(rtcOption)
             this.#RTC = new RTCPeerConnection(rtcOption)
-            this.RTCD = this.#RTC.createDataChannel('GYSSS')
+            this.RTCD = this.#RTC.createDataChannel('GY')
+            this.#RTC.ondatachannel = event => {
+                this.dataChannelState(event)
+            }
             this.#RTC.onicecandidate = callback
-            setInterval(() => {
-                console.log('iceConnectionState',this.#RTC.iceConnectionState)
-                console.log('connectionState',this.#RTC.connectionState)
-            },1000)
+            // setInterval(() => {
+            //     console.log('iceConnectionState',this.#RTC.iceConnectionState)
+            //     console.log('connectionState',this.#RTC.connectionState)
+            // },3000)
         }
         createOffer(){
             return new Promise(async rec => {
@@ -285,6 +290,39 @@
         setICE(ice){
             this.#RTC.addIceCandidate(ice)
         }
+        dataChannelState(event){
+            const RTCChannel = event.channel;
+            RTCChannel.onmessage = msg=>{
+                try{
+                    const message = JSON.parse(msg.data)
+                    if(message.type != 'heart'){
+                        this.#onMessage(message)
+                    }
+                }catch (e) {
+                    console.log('非JSON数据',msg.data)
+                }
+            }
+            RTCChannel.onopen = ()=>{
+                console.log('DataChannel is Open',this)
+                this.#RTCD_HEART = setInterval(() => {
+                    this.RTCD.send(JSON.stringify({
+                        type:'heart'
+                    }))
+                },5000)}
+            RTCChannel.onclose = ()=>{
+                console.log('DataChannel is Close')
+                clearInterval(this.#RTCD_HEART)
+            }
+            RTCChannel.onerror = (e)=>{console.log('DataChannel is error',e)}
+        }
+        send(data){
+            this.RTCD.send(data)
+        }
+        onMessage(callback){
+            this.#onMessage = (data) => {
+                callback(data)
+            }
+        }
     }
 
     async function start(){
@@ -292,7 +330,7 @@
         //    开始业务
         const click = document.querySelector('#CreateConnect')
         click.onclick = async event => {
-            const mubiaoNasName = '52sswyxh6em4KByKAp4TrJBEfyb73Jts'
+            const mubiaoNasName = '1648885199776N39IDQTS35NBFSPP447'
             const canConnection = await sl.createConnection(mubiaoNasName)
             if(!canConnection.data.state)return false
             const master = canConnection.data.master
@@ -320,6 +358,12 @@
             const offer = await userRTC.createOffer()
             const answer = await sl.createRTC(master, offer, rtcName)
             userRTC.setAnswer(answer)
+            userRTC.onMessage(data => {
+                console.log(data)
+            })
+            window.send = data => {
+                userRTC.send(data)
+            }
         }
     }
     start()
